@@ -1,0 +1,62 @@
+services:
+  db:
+    container_name: simplecrud_mariadb
+    image: "mariadb:latest"
+    environment:
+      MYSQL_ROOT_PASSWORD: db_password123
+      MYSQL_DATABASE: simplecrud_db
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+  react:
+    build: ./frontend
+    container_name: simplecrud_react 
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - node_modules_react:/app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - django
+  django:
+    build: ./backend
+    command: python manage.py runserver 0.0.0.0:8000
+    container_name: simplecrud_django
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env.dev
+    depends_on:
+      - db
+  nginx:
+    build: ./nginx
+    container_name: simplecrud_nginx
+    ports:
+      - 8080:80
+    restart: always
+    # volumes:
+      # Production
+      # - ./frontend/dist:/app/dist
+    depends_on:
+      - django
+      - react
+      - db
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: simplecrud_phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 2000M
+    ports:
+      - 8081:80
+
+volumes:
+  node_modules_react:
+  mariadb_data:
